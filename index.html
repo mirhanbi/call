@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>교무실 선생님 호출</title>
+    <title>선생님 호출 키오스크</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
     <style>
@@ -12,7 +12,7 @@
             letter-spacing: 0.5px;
         }
 
-        /* 터치 시 깜빡임(하이라이트) 방지 및 부드러운 전환 효과 */
+        /* 터치 시 깜빡임(하이라이트) 방지 */
         * {
             -webkit-tap-highlight-color: transparent;
         }
@@ -23,11 +23,11 @@
 
         .teacher-card:active {
             transform: scale(0.92);
-            background-color: #fce7f3; /* Tailwind pink-100 */
-            border-color: #f472b6; /* Tailwind pink-400 */
+            background-color: #fce7f3;
+            border-color: #f472b6;
         }
         
-        /* 현재 호출 중인 선생님 표시 애니메이션 (봄 느낌 핑크) */
+        /* 현재 호출 중인 선생님 표시 애니메이션 */
         @keyframes pulse-border {
             0% { box-shadow: 0 0 0 0 rgba(244, 114, 182, 0.7); }
             70% { box-shadow: 0 0 0 10px rgba(244, 114, 182, 0); }
@@ -35,11 +35,23 @@
         }
         
         .calling {
-            background-color: #fdf2f8; /* pink-50 */
-            border-color: #f472b6; /* pink-400 */
+            background-color: #fdf2f8;
+            border-color: #f472b6;
             animation: pulse-border 1.5s infinite;
             transform: scale(1.05);
             z-index: 10;
+        }
+
+        /* 취소 버튼 붉은 테두리 애니메이션 */
+        @keyframes cancel-border-pulse {
+            0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.6); border-color: #ef4444; }
+            50% { box-shadow: 0 0 0 12px rgba(239, 68, 68, 0); border-color: #fca5a5; }
+            100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); border-color: #ef4444; }
+        }
+        
+        .cancel-anim {
+            animation: cancel-border-pulse 1.5s infinite;
+            color: #ef4444; /* Tailwind red-500 */
         }
     </style>
 </head>
@@ -52,11 +64,24 @@
                 <div class="inline-flex items-center justify-center w-12 h-12 bg-white/70 backdrop-blur-sm rounded-full mb-2 shadow-sm border border-pink-200 text-3xl transform hover:rotate-12 transition-transform cursor-default">
                     🌸
                 </div>
-                <h1 class="text-2xl md:text-3xl font-normal text-rose-500 tracking-wide mb-1 drop-shadow-sm">선생님, 계신가요?</h1>
-                <p class="text-rose-400 text-sm md:text-base">용무가 있는 선생님을 콕! 눌러주세요 🌷</p>
+                
+                <!-- 제목과 취소 버튼을 나란히 배치하기 위한 Wrapper -->
+                <div class="relative inline-flex items-center justify-center mb-1">
+                    <h1 class="text-2xl md:text-3xl font-normal text-rose-500 tracking-wide drop-shadow-sm">&lt;선생님 호출 키오스크&gt;</h1>
+                    
+                    <!-- 제목 우측 호출 취소 버튼 (크기 확대 및 붉은 애니메이션 적용) -->
+                    <button id="cancel-btn" onclick="cancelCall()" class="absolute left-full ml-4 flex items-center justify-center whitespace-nowrap gap-1.5 bg-white/95 backdrop-blur-sm border-2 hover:bg-red-50 rounded-full px-5 py-2 shadow-md transition-all duration-300 focus:outline-none active:scale-95 opacity-0 pointer-events-none scale-90 z-20 cancel-anim">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+                        </svg>
+                        <span class="text-base font-sans font-bold">호출 취소</span>
+                    </button>
+                </div>
+
+                <p class="text-rose-400 text-sm md:text-base mt-1">용무가 있는 선생님을 콕! 눌러주세요 🌷</p>
             </header>
 
-            <!-- 상태 표시줄 (호출 중...) -->
+            <!-- 상태 표시줄 -->
             <div id="status-bar" class="h-6 mb-3 text-center text-rose-500 font-normal text-base md:text-lg opacity-0 transition-opacity duration-300">
                 호출 중입니다...
             </div>
@@ -65,16 +90,6 @@
             <div id="teacher-grid" class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-7 gap-2 md:gap-3 pb-2">
                 <!-- 자바스크립트로 버튼이 생성되어 여기에 삽입됩니다 -->
             </div>
-        </div>
-
-        <!-- 하단 호출 취소 버튼 -->
-        <div class="flex justify-center mt-4 mb-4">
-            <button onclick="cancelCall()" class="flex items-center justify-center gap-2 bg-white/80 backdrop-blur-sm border-2 border-stone-200 text-stone-500 hover:bg-stone-50 hover:text-stone-700 hover:border-stone-300 rounded-full px-6 py-2.5 shadow-sm transition-all focus:outline-none focus:ring-4 focus:ring-stone-200 active:scale-95">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                    <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
-                </svg>
-                <span class="text-lg">호출 취소</span>
-            </button>
         </div>
     </div>
 
@@ -107,28 +122,11 @@
         const gridContainer = document.getElementById('teacher-grid');
         const statusBar = document.getElementById('status-bar');
         
-        // 상태 제어를 위한 변수들
         let currentCard = null;
         let audioCtx = null; 
         let dingDongTimeout = null; 
         let activeOscillators = []; 
-        let activeFallbackAudio = null; // 온라인 TTS 오디오 객체 보관용
-
-        // 브라우저 음성 합성(TTS) 지원 여부 확인
-        const isSpeechSupported = 'speechSynthesis' in window;
-        let koreanVoices = [];
-
-        // 내장 목소리 목록 불러오기
-        function loadVoices() {
-            if (!isSpeechSupported) return;
-            const allVoices = window.speechSynthesis.getVoices();
-            koreanVoices = allVoices.filter(voice => voice.lang.includes('ko'));
-        }
-
-        if (isSpeechSupported && window.speechSynthesis.onvoiceschanged !== undefined) {
-            window.speechSynthesis.onvoiceschanged = loadVoices;
-        }
-        loadVoices();
+        let activeVoiceAudio = null;
 
         // 종소리(딩동) 효과음 생성 함수
         function playDingDong(callback) {
@@ -179,19 +177,19 @@
 
         // 호출 취소 함수
         function cancelCall() {
-            // 1. 기본 브라우저 TTS 중지
-            if (isSpeechSupported) {
+            // 브라우저 내장 TTS가 대체 수단으로 실행 중일 경우 중지
+            if ('speechSynthesis' in window) {
                 window.speechSynthesis.cancel();
             }
 
-            // 2. 온라인 폴백 오디오 중지 (스탠바이미 용)
-            if (activeFallbackAudio) {
-                activeFallbackAudio.pause();
-                activeFallbackAudio.currentTime = 0;
-                activeFallbackAudio = null;
+            // 재생 중인 선생님 음성(.wav) 중지
+            if (activeVoiceAudio) {
+                activeVoiceAudio.pause();
+                activeVoiceAudio.currentTime = 0;
+                activeVoiceAudio = null;
             }
 
-            // 3. 종소리 재생 대기 및 진행 중지
+            // 종소리 진행 중지
             if (dingDongTimeout) {
                 clearTimeout(dingDongTimeout);
                 dingDongTimeout = null;
@@ -201,7 +199,14 @@
             });
             activeOscillators = [];
 
-            // 4. UI 초기화
+            // 취소 버튼 숨기기
+            const cancelBtn = document.getElementById('cancel-btn');
+            if (cancelBtn) {
+                cancelBtn.classList.remove('opacity-100', 'scale-100', 'pointer-events-auto');
+                cancelBtn.classList.add('opacity-0', 'scale-90', 'pointer-events-none');
+            }
+
+            // UI 초기화
             if (currentCard) {
                 currentCard.classList.remove('calling');
                 currentCard = null;
@@ -228,10 +233,8 @@
             });
         }
 
-        // 선생님 호출 및 오디오 재생 처리
+        // 선생님 호출 및 저장된 WAV 파일 재생
         function callTeacher(name, buttonElement) {
-            if (isSpeechSupported && koreanVoices.length === 0) loadVoices();
-
             cancelCall();
 
             currentCard = buttonElement;
@@ -240,66 +243,67 @@
             statusBar.textContent = `🎵 "${name} 선생님"을 부르는 중이에요! 🌸`;
             statusBar.classList.remove('opacity-0');
 
-            const textToSpeak = `${name} 선생님, 용무 있어 왔습니다. ${name} 선생님, 용무 있어 왔습니다.`;
-            
+            // 취소 버튼 표시
+            const cancelBtn = document.getElementById('cancel-btn');
+            if (cancelBtn) {
+                cancelBtn.classList.remove('opacity-0', 'scale-90', 'pointer-events-none');
+                cancelBtn.classList.add('opacity-100', 'scale-100', 'pointer-events-auto');
+            }
+
+            // UI 초기화 헬퍼 함수
+            const resetUI = () => {
+                if (currentCard === buttonElement) {
+                    currentCard.classList.remove('calling');
+                    statusBar.classList.add('opacity-0');
+                    currentCard = null;
+
+                    const btn = document.getElementById('cancel-btn');
+                    if (btn) {
+                        btn.classList.remove('opacity-100', 'scale-100', 'pointer-events-auto');
+                        btn.classList.add('opacity-0', 'scale-90', 'pointer-events-none');
+                    }
+                }
+            };
+
             playDingDong(() => {
                 if (currentCard !== buttonElement) return;
 
-                // [중요 수정] 스탠바이미처럼 한국어 내장 목소리가 없는 경우 온라인 구글 번역기 음성으로 대체
-                if (!isSpeechSupported || koreanVoices.length === 0) {
-                    // 구글 번역기 비공식 TTS URL을 활용하여 실시간 오디오 생성
-                    const ttsUrl = `https://translate.google.com/translate_tts?ie=UTF-8&tl=ko-KR&client=tw-ob&q=${encodeURIComponent(textToSpeak)}`;
-                    activeFallbackAudio = new Audio(ttsUrl);
-                    
-                    activeFallbackAudio.onended = () => {
-                        if (currentCard === buttonElement) {
-                            currentCard.classList.remove('calling');
-                            statusBar.classList.add('opacity-0');
-                            currentCard = null;
-                        }
-                    };
-                    
-                    activeFallbackAudio.onerror = () => {
-                        console.error("온라인 TTS 불러오기 실패");
-                        if (currentCard === buttonElement) {
-                            currentCard.classList.remove('calling');
-                            statusBar.classList.add('opacity-0');
-                            currentCard = null;
-                        }
-                    };
-
-                    activeFallbackAudio.play().catch(e => console.error("오디오 재생 에러:", e));
-                    return; // 폴백 사용 시 아래 내장 TTS 로직은 실행하지 않음
-                }
-
-                // 기존 기기(PC, 폰 등) 내장 음성 합성 로직
-                const utterance = new SpeechSynthesisUtterance(textToSpeak);
-                utterance.lang = 'ko-KR';
+                // WAV 파일 경로 설정
+                const audioUrl = `./sounds/${name}.wav`;
                 
-                if (koreanVoices.length > 0) {
-                    let preferredVoice = koreanVoices.find(voice => voice.name.includes('Yuna')) ||
-                                         koreanVoices.find(voice => voice.name.includes('SunHi')) ||
-                                         koreanVoices.find(voice => voice.name.includes('Google') || voice.name.includes('Online') || voice.name.includes('Natural'));
-                    
-                    if (!preferredVoice) preferredVoice = koreanVoices[0];
-                    utterance.voice = preferredVoice;
-                }
-
-                utterance.rate = 0.95; 
-                utterance.pitch = 1.1;  
-
-                utterance.onend = utterance.onerror = () => {
-                    if (currentCard === buttonElement) {
-                        currentCard.classList.remove('calling');
-                        statusBar.classList.add('opacity-0');
-                        currentCard = null;
+                activeVoiceAudio = new Audio(audioUrl);
+                
+                activeVoiceAudio.onended = resetUI;
+                
+                // 파일이 없을 경우 (미리보기 화면이거나 sounds 폴더를 안 만든 경우)
+                activeVoiceAudio.onerror = () => {
+                    // 에러 시 브라우저 내장 TTS로 대체 동작 (Fallback)
+                    if ('speechSynthesis' in window) {
+                        const textToSpeak = `${name} 선생님, 용무 있어 왔습니다. ${name} 선생님, 용무 있어 왔습니다.`;
+                        const utterance = new SpeechSynthesisUtterance(textToSpeak);
+                        utterance.lang = 'ko-KR';
+                        utterance.rate = 0.95;
+                        utterance.pitch = 1.1;
+                        
+                        utterance.onend = resetUI;
+                        utterance.onerror = () => {
+                            statusBar.textContent = `⚠️ 음성 파일이 없습니다! (sounds/${name}.wav)`;
+                            setTimeout(resetUI, 3000);
+                        };
+                        window.speechSynthesis.speak(utterance);
+                    } else {
+                        // TTS마저 지원 안 되는 환경일 경우 에러 메시지 표시
+                        statusBar.textContent = `⚠️ 음성 파일이 없습니다! (sounds/${name}.wav)`;
+                        setTimeout(resetUI, 3000);
                     }
                 };
 
-                window.speechSynthesis.speak(utterance);
+                // play() 실패 에러 무시 (onerror 이벤트에서 처리함)
+                activeVoiceAudio.play().catch(e => {});
             });
         }
 
+        // 초기화
         renderTeachers();
 
     </script>
