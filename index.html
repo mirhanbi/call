@@ -45,24 +45,36 @@
 </head>
 <body class="bg-gradient-to-br from-pink-50 via-rose-50 to-amber-50 min-h-screen text-stone-800 font-sans selection:bg-pink-200">
 
-    <div class="max-w-6xl mx-auto px-2 py-4 md:py-6">
-        <!-- 헤더 영역 -->
-        <header class="text-center mb-4">
-            <div class="inline-flex items-center justify-center w-12 h-12 bg-white/70 backdrop-blur-sm rounded-full mb-2 shadow-sm border border-pink-200 text-3xl transform hover:rotate-12 transition-transform cursor-default">
-                🌸
-            </div>
-            <h1 class="text-2xl md:text-3xl font-normal text-rose-500 tracking-wide mb-1 drop-shadow-sm">선생님, 계신가요?</h1>
-            <p class="text-rose-400 text-sm md:text-base">용무가 있는 선생님을 콕! 눌러주세요 🌷</p>
-        </header>
+    <div class="max-w-6xl mx-auto px-2 py-4 md:py-6 flex flex-col min-h-screen">
+        <div class="flex-grow">
+            <!-- 헤더 영역 -->
+            <header class="text-center mb-4">
+                <div class="inline-flex items-center justify-center w-12 h-12 bg-white/70 backdrop-blur-sm rounded-full mb-2 shadow-sm border border-pink-200 text-3xl transform hover:rotate-12 transition-transform cursor-default">
+                    🌸
+                </div>
+                <h1 class="text-2xl md:text-3xl font-normal text-rose-500 tracking-wide mb-1 drop-shadow-sm">선생님, 계신가요?</h1>
+                <p class="text-rose-400 text-sm md:text-base">용무가 있는 선생님을 콕! 눌러주세요 🌷</p>
+            </header>
 
-        <!-- 상태 표시줄 (호출 중...) -->
-        <div id="status-bar" class="h-6 mb-3 text-center text-rose-500 font-normal text-base md:text-lg opacity-0 transition-opacity duration-300">
-            호출 중입니다...
+            <!-- 상태 표시줄 (호출 중...) -->
+            <div id="status-bar" class="h-6 mb-3 text-center text-rose-500 font-normal text-base md:text-lg opacity-0 transition-opacity duration-300">
+                호출 중입니다...
+            </div>
+
+            <!-- 선생님 목록 그리드 (한 화면에 들어오도록 열 개수 증가 및 간격 축소) -->
+            <div id="teacher-grid" class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-7 gap-2 md:gap-3 pb-2">
+                <!-- 자바스크립트로 버튼이 생성되어 여기에 삽입됩니다 -->
+            </div>
         </div>
 
-        <!-- 선생님 목록 그리드 (한 화면에 들어오도록 열 개수 증가 및 간격 축소) -->
-        <div id="teacher-grid" class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-7 gap-2 md:gap-3 pb-6">
-            <!-- 자바스크립트로 버튼이 생성되어 여기에 삽입됩니다 -->
+        <!-- 하단 호출 취소 버튼 -->
+        <div class="flex justify-center mt-4 mb-4">
+            <button onclick="cancelCall()" class="flex items-center justify-center gap-2 bg-white/80 backdrop-blur-sm border-2 border-stone-200 text-stone-500 hover:bg-stone-50 hover:text-stone-700 hover:border-stone-300 rounded-full px-6 py-2.5 shadow-sm transition-all focus:outline-none focus:ring-4 focus:ring-stone-200 active:scale-95">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+                </svg>
+                <span class="text-lg">호출 취소</span>
+            </button>
         </div>
     </div>
 
@@ -94,8 +106,12 @@
 
         const gridContainer = document.getElementById('teacher-grid');
         const statusBar = document.getElementById('status-bar');
+        
+        // 상태 제어를 위한 변수들
         let currentCard = null;
-        let audioCtx = null; // 오디오 재생을 위한 컨텍스트
+        let audioCtx = null; 
+        let dingDongTimeout = null; // 종소리 후 TTS 재생을 위한 타이머
+        let activeOscillators = []; // 재생 중인 오디오 노드 보관
 
         // 브라우저 음성 합성(TTS) 지원 여부 확인
         const isSpeechSupported = 'speechSynthesis' in window;
@@ -103,7 +119,7 @@
         // 사용 가능한 한국어 목소리를 저장할 배열
         let koreanVoices = [];
 
-        // 목소리 목록을 불러오는 함수 (크롬 등은 비동기로 불러옴)
+        // 목소리 목록을 불러오는 함수
         function loadVoices() {
             const allVoices = window.speechSynthesis.getVoices();
             koreanVoices = allVoices.filter(voice => voice.lang.includes('ko'));
@@ -113,12 +129,15 @@
         if (isSpeechSupported && window.speechSynthesis.onvoiceschanged !== undefined) {
             window.speechSynthesis.onvoiceschanged = loadVoices;
         }
-        // 초기 로드 시도
         loadVoices();
 
         // 종소리(딩동) 효과음 생성 함수
         function playDingDong(callback) {
-            // 브라우저 호환성 처리
+            // 기존 타이머가 있다면 초기화
+            if (dingDongTimeout) {
+                clearTimeout(dingDongTimeout);
+            }
+
             const AudioContext = window.AudioContext || window.webkitAudioContext;
             if (!AudioContext) {
                 if (callback) callback();
@@ -127,6 +146,10 @@
 
             if (!audioCtx) {
                 audioCtx = new AudioContext();
+            }
+
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
             }
 
             // 첫 번째 소리 (딩 - E5)
@@ -141,6 +164,7 @@
             gain1.connect(audioCtx.destination);
             osc1.start(audioCtx.currentTime);
             osc1.stop(audioCtx.currentTime + 0.5);
+            activeOscillators.push(osc1);
 
             // 두 번째 소리 (동 - C5)
             const osc2 = audioCtx.createOscillator();
@@ -154,10 +178,51 @@
             gain2.connect(audioCtx.destination);
             osc2.start(audioCtx.currentTime + 0.4);
             osc2.stop(audioCtx.currentTime + 1.5);
+            activeOscillators.push(osc2);
 
             // 종소리 재생 후 약 1.2초 뒤에 음성합성(콜백) 실행
-            if (callback) {
-                setTimeout(callback, 1200);
+            dingDongTimeout = setTimeout(() => {
+                activeOscillators = []; // 재생 완료된 오디오 초기화
+                if (callback) callback();
+            }, 1200);
+        }
+
+        // 호출 취소 함수
+        function cancelCall() {
+            // 1. TTS(음성 합성) 중지
+            if (isSpeechSupported) {
+                window.speechSynthesis.cancel();
+            }
+
+            // 2. 종소리 재생 대기 중지
+            if (dingDongTimeout) {
+                clearTimeout(dingDongTimeout);
+                dingDongTimeout = null;
+            }
+
+            // 3. 재생 중인 종소리(Oscillator) 강제 중지
+            activeOscillators.forEach(osc => {
+                try {
+                    osc.stop();
+                    osc.disconnect();
+                } catch (e) {
+                    // 이미 중지된 경우 무시
+                }
+            });
+            activeOscillators = [];
+
+            // 4. UI 및 상태 초기화
+            if (currentCard) {
+                currentCard.classList.remove('calling');
+                currentCard = null;
+                
+                // 상태 표시줄 텍스트 변경 후 서서히 사라지기
+                statusBar.textContent = "❌ 호출이 취소되었습니다.";
+                setTimeout(() => {
+                    if (!currentCard) {
+                        statusBar.classList.add('opacity-0');
+                    }
+                }, 1500);
             }
         }
 
@@ -165,10 +230,8 @@
         function renderTeachers() {
             teachers.forEach((teacher, index) => {
                 const button = document.createElement('button');
-                // 카드 상하 여백과 모서리 둥글기를 컴팩트하게 축소
                 button.className = "teacher-card bg-white/80 backdrop-blur-sm border-2 border-pink-100 rounded-2xl py-3 px-2 shadow-sm hover:shadow-lg hover:-translate-y-1 hover:border-pink-300 flex flex-col items-center justify-center text-center cursor-pointer outline-none focus:ring-4 focus:ring-pink-300 focus:ring-opacity-50 relative";
                 
-                // 폰트 크기 및 간격 축소
                 button.innerHTML = `
                     <span class="text-lg md:text-xl font-normal text-stone-700 mb-1.5">${teacher.name}</span>
                     <span class="text-xs md:text-sm text-rose-500 font-normal break-keep bg-rose-50 px-2.5 py-0.5 rounded-full border border-rose-100">${teacher.subject}</span>
@@ -188,16 +251,10 @@
                 return;
             }
 
-            // 혹시 목소리 목록이 비어있다면 다시 시도
             if (koreanVoices.length === 0) loadVoices();
 
-            // 이전 음성이 재생 중이라면 취소
-            window.speechSynthesis.cancel();
-
-            // 이전 선택된 카드의 스타일 초기화
-            if (currentCard) {
-                currentCard.classList.remove('calling');
-            }
+            // 이전 호출을 안전하게 취소하고 시작
+            cancelCall();
 
             // 현재 선택된 카드 강조
             currentCard = buttonElement;
@@ -212,50 +269,44 @@
             
             // 종소리 효과음을 먼저 재생한 뒤 TTS 음성 재생
             playDingDong(() => {
-                // 소리 재생 전 카드가 취소되거나 다른 카드로 변경되었는지 확인
+                // 소리 재생 전 카드가 취소되거나 변경되었는지 다시 확인
                 if (currentCard !== buttonElement) return;
 
                 const utterance = new SpeechSynthesisUtterance(textToSpeak);
-                
-                // 언어 설정
                 utterance.lang = 'ko-KR';
                 
-                // --- 자연스러운 목소리 고정 로직 추가 ---
+                // 자연스러운 목소리 고정 로직
                 if (koreanVoices.length > 0) {
-                    // Yuna(맥/아이폰), SunHi(윈도우/엣지), Google 등 고음질/부드러운 목소리 우선 탐색
                     let preferredVoice = koreanVoices.find(voice => voice.name.includes('Yuna')) ||
                                          koreanVoices.find(voice => voice.name.includes('SunHi')) ||
                                          koreanVoices.find(voice => voice.name.includes('Google') || voice.name.includes('Online') || voice.name.includes('Natural'));
                     
-                    // 선호하는 목소리가 없으면 불러온 첫 번째 한국어 목소리 사용
                     if (!preferredVoice) {
                         preferredVoice = koreanVoices[0];
                     }
                     utterance.voice = preferredVoice;
                 }
-                // ------------------------------------
 
-                // 속도, 톤(Pitch) 설정 - 아름답고 부드러운 느낌을 위해 조정
-                utterance.rate = 0.95;  // 약간 느리게 (차분하고 우아한 느낌)
-                utterance.pitch = 1.1;  // 톤은 살짝만 높게 (너무 높으면 기계음처럼 들리므로 조절)
+                // 속도, 톤(Pitch) 설정
+                utterance.rate = 0.95; 
+                utterance.pitch = 1.1;  
 
-                // 음성 재생이 끝났을 때의 처리
                 utterance.onend = () => {
                     if (currentCard === buttonElement) {
                         currentCard.classList.remove('calling');
                         statusBar.classList.add('opacity-0');
+                        currentCard = null;
                     }
                 };
 
-                // 에러 처리
                 utterance.onerror = () => {
                     if (currentCard === buttonElement) {
                         currentCard.classList.remove('calling');
                         statusBar.classList.add('opacity-0');
+                        currentCard = null;
                     }
                 };
 
-                // 소리 재생
                 window.speechSynthesis.speak(utterance);
             });
         }
