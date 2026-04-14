@@ -67,7 +67,7 @@
                 
                 <!-- 제목과 취소 버튼을 나란히 배치하기 위한 Wrapper -->
                 <div class="relative inline-flex items-center justify-center mb-1">
-                    <h1 class="text-2xl md:text-3xl font-normal text-rose-500 tracking-wide drop-shadow-sm">&lt;선생님 호출 키오스크&gt;</h1>
+                    <h1 class="text-2xl md:text-3xl font-normal text-rose-500 tracking-wide drop-shadow-sm">[시험기간!! 교무실 밖에서 선생님을 불러주세요]</h1>
                     
                     <!-- 제목 우측 호출 취소 버튼 (크기 확대 및 붉은 애니메이션 적용) -->
                     <button id="cancel-btn" onclick="cancelCall()" class="absolute left-full ml-4 flex items-center justify-center whitespace-nowrap gap-1.5 bg-white/95 backdrop-blur-sm border-2 hover:bg-red-50 rounded-full px-5 py-2 shadow-md transition-all duration-300 focus:outline-none active:scale-95 opacity-0 pointer-events-none scale-90 z-20 cancel-anim">
@@ -78,7 +78,10 @@
                     </button>
                 </div>
 
-                <p class="text-rose-400 text-sm md:text-base mt-1">용무가 있는 선생님을 콕! 눌러주세요 🌷</p>
+                <p class="text-rose-400 text-sm md:text-base mt-2 leading-relaxed">
+                    (노크!! 000선생님 용무있어 왔습니다~)<br>
+                    용무가 있는 선생님을 콕! 눌러주세요 🌷
+                </p>
             </header>
 
             <!-- 상태 표시줄 -->
@@ -99,7 +102,6 @@
             { name: "김인숙", subject: "정보컴퓨터" },
             { name: "김광현", subject: "기술" },
             { name: "권진혁", subject: "학생부장/음악" },
-            { name: "박혜숙", subject: "영어" },
             { name: "이창용", subject: "체육" },
             { name: "황진국", subject: "국어" },
             { name: "빈수민", subject: "역사" },
@@ -224,7 +226,10 @@
                 button.className = "teacher-card bg-white/80 backdrop-blur-sm border-2 border-pink-100 rounded-2xl py-3 px-2 shadow-sm hover:shadow-lg hover:-translate-y-1 hover:border-pink-300 flex flex-col items-center justify-center text-center cursor-pointer outline-none focus:ring-4 focus:ring-pink-300 focus:ring-opacity-50 relative";
                 
                 button.innerHTML = `
-                    <span class="text-lg md:text-xl font-normal text-stone-700 mb-1.5">${teacher.name}</span>
+                    <div class="mb-1.5 flex items-baseline justify-center gap-0.5">
+                        <span class="text-lg md:text-xl font-normal text-stone-700">${teacher.name}</span>
+                        <span class="text-[10px] md:text-xs text-stone-400 font-normal">선생님</span>
+                    </div>
                     <span class="text-xs md:text-sm text-rose-500 font-normal break-keep bg-rose-50 px-2.5 py-0.5 rounded-full border border-rose-100">${teacher.subject}</span>
                 `;
 
